@@ -3,7 +3,7 @@
 # @Author: Ben Souverbie <obinoby>
 # @Date:   2017-01-09T21:24:34+01:00
 # @Last modified by:   obinoby
-# @Last modified time: 2017-01-09T22:28:16+01:00
+# @Last modified time: 2017-01-09T22:33:35+01:00
 #
 # Feel free to take it, change it to your taste or whatever :)
 #
@@ -28,7 +28,7 @@ fi
 re='^[0-9]+$'
 if ! [[ $ACTION =~ $re ]]
 then
-   DPI=96
+	DPI=96
 else
 	DPI=$ACTION
 	ACTION="optimal"
@@ -81,51 +81,51 @@ then
 			echo "This screen is not HiDPI - nothing to do"
 		else
 			case $ACTION in
-			"reset")
-				# Set that display to native resolution without scaling
-				echo "Set the display scaling to 1"
-				gsettings set org.gnome.desktop.interface scaling-factor 1
+				"reset")
+					# Set that display to native resolution without scaling
+					echo "Set the display scaling to 1"
+					gsettings set org.gnome.desktop.interface scaling-factor 1
 
-				echo "Zoom to native 1x"
-				ZOUT="1"
-				echo "+ Zoom out on display $DISP by a factor of $ZOUT"
-				xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
+					echo "Zoom to native 1x"
+					ZOUT="1"
+					echo "+ Zoom out on display $DISP by a factor of $ZOUT"
+					xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
 
-				RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
-				echo "+ Rendering resolution set to $RENDER"
+					RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
+					echo "+ Rendering resolution set to $RENDER"
 
-				echo "+ Set the panning so the cursor can go all over the screen"
-				xrandr --output $DISP --panning $RENDER
-			;;
-			"optimal")
-				# Set that display to scale that is like the standard 96dpi ($DPI=96)
-				# or the given wanted dpi
-				echo "Set the display scaling to 2"
-				gsettings set org.gnome.desktop.interface scaling-factor 2
-				VPDENSITY=$(($PDENSITY/2))
-				echo "+ Virtual pixel density is now $VPDENSITY"
+					echo "+ Set the panning so the cursor can go all over the screen"
+					xrandr --output $DISP --panning $RENDER
+				;;
+				"optimal")
+					# Set that display to scale that is like the standard 96dpi ($DPI=96)
+					# or the given wanted dpi
+					echo "Set the display scaling to 2"
+					gsettings set org.gnome.desktop.interface scaling-factor 2
+					VPDENSITY=$(($PDENSITY/2))
+					echo "+ Virtual pixel density is now $VPDENSITY"
 
-				echo "Zoom out to a confortable virtual resolution (arround $DPI px/inch)"
-				#Calculate the scaling factor for zooming out
-				#BASH does not support real numbers so by multiplying the dpi by ten before
-				#and dividing the result by ten (by placing a dot one char before end)
-				#we get a better value
-				TDPI=$(($DPI*10))
-				ZOUT=$(($TDPI/$VPDENSITY))
-				ZOUT=$(sed 's/.\{1\}$/.&/' <<< "$ZOUT")
-				echo "+ Zoom out on display $DISP by a factor of $ZOUT"
-				xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
+					echo "Zoom out to a confortable virtual resolution (arround $DPI px/inch)"
+					#Calculate the scaling factor for zooming out
+					#BASH does not support real numbers so by multiplying the dpi by ten before
+					#and dividing the result by ten (by placing a dot one char before end)
+					#we get a better value
+					TDPI=$(($DPI*10))
+					ZOUT=$(($TDPI/$VPDENSITY))
+					ZOUT=$(sed 's/.\{1\}$/.&/' <<< "$ZOUT")
+					echo "+ Zoom out on display $DISP by a factor of $ZOUT"
+					xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
 
-				RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
-				echo "+ Rendering resolution set to $RENDER and scaled down to $RES"
+					RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
+					echo "+ Rendering resolution set to $RENDER and scaled down to $RES"
 
-				echo "+ Set the panning so the cursor can go all over the screen"
-				xrandr --output $DISP --panning $RENDER
-			;;
-			*)
-				echo "Uncknown parameter - abort"
-				exit 1
-			;;
+					echo "+ Set the panning so the cursor can go all over the screen"
+					xrandr --output $DISP --panning $RENDER
+				;;
+				*)
+					echo "Uncknown parameter - abort"
+					exit 1
+				;;
 			esac
 		fi
 	done
