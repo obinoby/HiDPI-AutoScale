@@ -1,74 +1,133 @@
 #!/bin/bash
 #
-# Author : Ben Souverbie
-# Date   : 2017-01-09
+# @Author: Ben Souverbie <obinoby>
+# @Date:   2017-01-09T21:24:34+01:00
+# @Last modified by:   obinoby
+# @Last modified time: 2017-01-09T22:28:16+01:00
+#
 # Feel free to take it, change it to your taste or whatever :)
+#
+# The principle :
+# - Gnome is used to scale up the display by multiplying by 2 in both directions
+# -> On some screen that provide a too big zoom. Sharp yes, but way too big.
+# - So we use xrandr to render the display on a much higher resolution than the screen is capable of
+# -> And then we scale it down to the native resolution of the screen
+#
+# Options :
+# - reset : Set the screen back to native resolution without scaling
+# - optimal : Set the display to a confortable 96dpi equivalent screen
+# - 80 : Set the display to a 80dpi equivalent (you can choose any value)
 
-ORDER=$1
-if [ -z $ORDER ]
+ACTION=$1
+if [ -z $ACTION ]
 then
-	ORDER="false"
+	ACTION="false"
 fi
 
-echo "Listing the displays"
-LDISP=$(xrandr | grep -v disconnected | grep connected | cut -d' ' -f1)
-for DISP in $LDISP
-do
-	RES=$(xrandr | grep -v disconnected | grep -A1 $DISP | grep -v connected | awk '{print $1}')
-	PW=$(echo $RES | cut -d'x' -f1)
-	PH=$(echo $RES | cut -d'x' -f2)
-	W=$(xrandr | grep DP-0 | awk '{print $13}')
-	W=${W:0:-2}
-	PDENSITY=$(($PW/($W/26)))
-	W=$(($W*$W))
-	H=$(xrandr | grep DP-0 | awk '{print $15}')
-	H=${H:0:-2}
-	H=$(($H*$H))
-	DIAG=$(($W+$H))
-	DIAG=$(echo "sqrt($DIAG)" | bc)
-	DIAG=$(($DIAG/26))
-	echo "+ Display $DISP :"
-	echo "++ Size          : ${DIAG}\" in diagonal"
-	echo "++ Resolution    : $RES"
-	echo "++ Pixel density : $PDENSITY px/inch"
+# Check if the given parameter is an integer or not
+re='^[0-9]+$'
+if ! [[ $ACTION =~ $re ]]
+then
+   DPI=96
+else
+	DPI=$ACTION
+	ACTION="optimal"
+fi
 
-	if [ $PDENSITY -lt 100 ]
-	then
-		echo "This screen is not HiDPI - nothing to do"
-	else
-		if [ $ORDER = "reset" ]
+if [ $ACTION != "false" ]
+then
+	echo "Listing the displays"
+	LDISP=$(xrandr | grep -v disconnected | grep connected | cut -d' ' -f1)
+	#Loop on every active display
+	for DISP in $LDISP
+	do
+		#Get the native screen resolution in that form 1024x768
+		RES=$(xrandr | grep -v disconnected | grep -A1 $DISP | grep -v connected | awk '{print $1}')
+		#Separate the width and height values
+		PW=$(echo $RES | cut -d'x' -f1)
+		PH=$(echo $RES | cut -d'x' -f2)
+		#Get the screen width in milimeters in that form 533mm
+		W=$(xrandr | grep $DISP | awk '{print $13}')
+		#Remove the "mm" from the string
+		W=${W:0:-2}
+		#Calculate the horizotal pixel density and convert from milimeters to inches
+		#The result is like 121 pixel/inch
+		PDENSITY=$(($PW/($W/26)))
+		#Calculate the diagonal of the screen using Pythagore law (w²+h²)=d²
+		#First square the width
+		W=$(($W*$W))
+		#Get the screen height in milimeters
+		H=$(xrandr | grep $DISP | awk '{print $15}')
+		#Remove the "mm" from the string
+		H=${H:0:-2}
+		#Then square the height
+		H=$(($H*$H))
+		#Sum them
+		DIAG=$(($W+$H))
+		#Calculate the square root
+		DIAG=$(echo "sqrt($DIAG)" | bc)
+		#And convert in inches
+		DIAG=$(($DIAG/26))
+		#Display screen information so that the user can anderstand what is happening
+		echo "+ Display $DISP :"
+		echo "++ Size          : ${DIAG}\" in diagonal"
+		echo "++ Resolution    : $RES"
+		echo "++ Pixel density : $PDENSITY px/inch"
+
+		# Before scaling let be sure that the screen is HiDPI
+		# The arbitrary value here is not_HiDPI<100dpi<=HiDPI
+		if [ $PDENSITY -lt 100 ]
 		then
-			echo "Set the display scaling to 1"
-			gsettings set org.gnome.desktop.interface scaling-factor 1
+			echo "This screen is not HiDPI - nothing to do"
+		else
+			case $ACTION in
+			"reset")
+				# Set that display to native resolution without scaling
+				echo "Set the display scaling to 1"
+				gsettings set org.gnome.desktop.interface scaling-factor 1
 
-			echo "Zoom to native 1x"
-			ZOUT="1"
-			echo "+ Zoom out on display $DISP by a factor of $ZOUT"
-			xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
+				echo "Zoom to native 1x"
+				ZOUT="1"
+				echo "+ Zoom out on display $DISP by a factor of $ZOUT"
+				xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
 
-			RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
-			echo "+ Rendering resolution set to $RENDER"
+				RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
+				echo "+ Rendering resolution set to $RENDER"
 
-			echo "+ Set the panning so the cursor can go all over the screen"
-			xrandr --output $DISP --panning $RENDER
-		elif [ $ORDER = "optimal" ]
-		then
-			echo "Set the display scaling to 2"
-			gsettings set org.gnome.desktop.interface scaling-factor 2
-			VPDENSITY=$(($PDENSITY/2))
-			echo "+ Virtual pixel density is now $VPDENSITY"
+				echo "+ Set the panning so the cursor can go all over the screen"
+				xrandr --output $DISP --panning $RENDER
+			;;
+			"optimal")
+				# Set that display to scale that is like the standard 96dpi ($DPI=96)
+				# or the given wanted dpi
+				echo "Set the display scaling to 2"
+				gsettings set org.gnome.desktop.interface scaling-factor 2
+				VPDENSITY=$(($PDENSITY/2))
+				echo "+ Virtual pixel density is now $VPDENSITY"
 
-			echo "Zoom out to a confortable virtual resolution (arround 92 px/inch)"
-			ZOUT=$((920/$VPDENSITY))
-			ZOUT=$(sed 's/.\{1\}$/.&/' <<< "$ZOUT")
-			echo "+ Zoom out on display $DISP by a factor of $ZOUT"
-			xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
+				echo "Zoom out to a confortable virtual resolution (arround $DPI px/inch)"
+				#Calculate the scaling factor for zooming out
+				#BASH does not support real numbers so by multiplying the dpi by ten before
+				#and dividing the result by ten (by placing a dot one char before end)
+				#we get a better value
+				TDPI=$(($DPI*10))
+				ZOUT=$(($TDPI/$VPDENSITY))
+				ZOUT=$(sed 's/.\{1\}$/.&/' <<< "$ZOUT")
+				echo "+ Zoom out on display $DISP by a factor of $ZOUT"
+				xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
 
-			RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
-			echo "+ Rendering resolution set to $RENDER and scaled down to $RES"
+				RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
+				echo "+ Rendering resolution set to $RENDER and scaled down to $RES"
 
-			echo "+ Set the panning so the cursor can go all over the screen"
-			xrandr --output $DISP --panning $RENDER
+				echo "+ Set the panning so the cursor can go all over the screen"
+				xrandr --output $DISP --panning $RENDER
+			;;
+			*)
+				echo "Uncknown parameter - abort"
+				exit 1
+			;;
+			esac
 		fi
-	fi
-done
+	done
+fi
+exit 0
