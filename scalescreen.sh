@@ -3,7 +3,7 @@
 # @Author: Ben Souverbie <obinoby>
 # @Date:   2017-01-09T21:24:34+01:00
 # @Last modified by:   obinoby
-# @Last modified time: 2017-01-11T18:26:25+01:00
+# @Last modified time: 2017-01-11T19:50:26+01:00
 #
 # Feel free to take it, change it to your taste or whatever :)
 #
@@ -13,6 +13,12 @@
 # - So we use xrandr to render the display on a much higher resolution than the screen is capable of
 # -> And then we scale it down to the native resolution of the screen
 #
+# The folder ~/.gnomescale contain one file per display containing the specific setting of that display
+# After the first launch a file is created for each display and is used te reconfigure the display any time.
+# The file is readed only if no new configuration is specified.
+#
+# All screens are to get the same virtual dpi so that display is consistent from screen to screen.
+#
 # Options :
 # - reset : Set the screen back to native resolution without scaling
 # - optimal : Set the display to a confortable 96dpi equivalent screen
@@ -21,22 +27,29 @@
 ACTION=$1
 if [ -z $ACTION ]
 then
-	ACTION="false"
+	#ACTION="fals"
+	ISSET=0
 fi
 
-CHANGE=0
+CONFDIR="$HOME/.gnomescale"
+mkdir -p $CONFDIR
+
 # Check if the given parameter is an integer or not
 re='^[0-9]+$'
 if ! [[ $ACTION =~ $re ]]
 then
-	DPI=96
-else
-	DPI=$ACTION
+	# Default value for optimal
+	DDPI=96
 	ACTION="optimal"
+	ISSET=0
+else
+	DDPI=$ACTION
+	ACTION="optimal"
+	ISSET=1
 fi
 
-if [ $ACTION != "false" ]
-then
+#if [ $ACTION != "false" ]
+#then
 	echo "Listing the displays"
 	LDISP=$(xrandr | grep -v disconnected | grep connected | cut -d' ' -f1)
 	#Loop on every active display
@@ -74,6 +87,17 @@ then
 		echo "++ Size          : ${DIAG}\" in diagonal"
 		echo "++ Resolution    : $RES"
 		echo "++ Pixel density : $PDENSITY px/inch"
+
+		# Check if that screen already have a saved configuration
+		if [ -f $CONFDIR/${DISP}_${PDENSITY} ] && [ $ISSET -eq 0 ]
+		then
+			echo "++ That screen already have a saved configuration"
+			echo "++ and no new specific configuration is asked"
+			DPI=$(cat $CONFDIR/${DISP}_${PDENSITY})
+			echo "++ --> using it : $DPI dpi"
+		else
+			DPI=$DDPI
+		fi
 
 		# Before scaling let be sure that the screen is HiDPI
 		# The arbitrary value here is not_HiDPI<100dpi<=HiDPI
@@ -142,8 +166,8 @@ then
 							;;
 					esac
 
-					# We did someting so $CHANGE is set to 1
-					CHANGE=1
+					# We did someting so update the conf file
+					rm $CONFDIR/${DISP}_${PDENSITY}
 				;;
 				"optimal")
 					# Set that display to scale that is like the standard 96dpi ($DPI=96)
@@ -214,8 +238,8 @@ then
 							;;
 					esac
 
-					# We did someting so $CHANGE is set to 1
-					CHANGE=1
+					# We did someting so update the conf file
+					echo "$DPI" > $CONFDIR/${DISP}_${PDENSITY}
 				;;
 				*)
 					echo "Uncknown parameter - abort"
@@ -224,5 +248,6 @@ then
 			esac
 		fi
 	done
-fi
+#fi
+
 exit 0
