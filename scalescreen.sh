@@ -3,7 +3,7 @@
 # @Author: Ben Souverbie <obinoby>
 # @Date:   2017-01-09T21:24:34+01:00
 # @Last modified by:   obinoby
-# @Last modified time: 2017-01-09T22:33:35+01:00
+# @Last modified time: 2017-01-11T18:26:25+01:00
 #
 # Feel free to take it, change it to your taste or whatever :)
 #
@@ -24,6 +24,7 @@ then
 	ACTION="false"
 fi
 
+CHANGE=0
 # Check if the given parameter is an integer or not
 re='^[0-9]+$'
 if ! [[ $ACTION =~ $re ]]
@@ -85,23 +86,81 @@ then
 					# Set that display to native resolution without scaling
 					echo "Set the display scaling to 1"
 					gsettings set org.gnome.desktop.interface scaling-factor 1
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 1
+							;;
+					esac
 
 					echo "Zoom to native 1x"
 					ZOUT="1"
 					echo "+ Zoom out on display $DISP by a factor of $ZOUT"
 					xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 2
+							;;
+					esac
 
 					RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 3
+							;;
+					esac
 					echo "+ Rendering resolution set to $RENDER"
 
 					echo "+ Set the panning so the cursor can go all over the screen"
 					xrandr --output $DISP --panning $RENDER
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 4
+							;;
+					esac
+
+					# We did someting so $CHANGE is set to 1
+					CHANGE=1
 				;;
 				"optimal")
 					# Set that display to scale that is like the standard 96dpi ($DPI=96)
 					# or the given wanted dpi
 					echo "Set the display scaling to 2"
 					gsettings set org.gnome.desktop.interface scaling-factor 2
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 1
+							;;
+					esac
 					VPDENSITY=$(($PDENSITY/2))
 					echo "+ Virtual pixel density is now $VPDENSITY"
 
@@ -115,12 +174,48 @@ then
 					ZOUT=$(sed 's/.\{1\}$/.&/' <<< "$ZOUT")
 					echo "+ Zoom out on display $DISP by a factor of $ZOUT"
 					xrandr --output $DISP --scale ${ZOUT}x${ZOUT}
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 2
+							;;
+					esac
 
 					RENDER=$(xrandr | grep $DISP | awk '{print $4}' | cut -d'+' -f1)
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 3
+							;;
+					esac
 					echo "+ Rendering resolution set to $RENDER and scaled down to $RES"
 
 					echo "+ Set the panning so the cursor can go all over the screen"
 					xrandr --output $DISP --panning $RENDER
+					OUT=$?
+					case $OUT in
+						0)
+							# Setings OK ; going to next setting
+							;;
+						*)
+							# Problem when applying this setting
+							echo "Problem when applying this setting : exiting"
+							exit 4
+							;;
+					esac
+
+					# We did someting so $CHANGE is set to 1
+					CHANGE=1
 				;;
 				*)
 					echo "Uncknown parameter - abort"
