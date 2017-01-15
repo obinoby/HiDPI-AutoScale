@@ -3,7 +3,7 @@
 # @Author: Ben Souverbie <obinoby>
 # @Date:   2017-01-09T21:24:34+01:00
 # @Last modified by:   obinoby
-# @Last modified time: 2017-01-11T19:50:26+01:00
+# @Last modified time: 2017-01-15T21:31:48+01:00
 #
 # Feel free to take it, change it to your taste or whatever :)
 #
@@ -27,7 +27,7 @@
 ACTION=$1
 if [ -z $ACTION ]
 then
-	#ACTION="fals"
+	#ACTION="false"
 	ISSET=0
 fi
 
@@ -38,10 +38,15 @@ mkdir -p $CONFDIR
 re='^[0-9]+$'
 if ! [[ $ACTION =~ $re ]]
 then
-	# Default value for optimal
-	DDPI=96
-	ACTION="optimal"
-	ISSET=0
+	if [[ "$ACTION" != "reset" ]]
+	then
+		# Default value for optimal
+		DDPI=96
+		ACTION="optimal"
+		ISSET=0
+	else
+		ISSET=2
+	fi
 else
 	DDPI=$ACTION
 	ACTION="optimal"
@@ -93,8 +98,15 @@ fi
 		then
 			echo "++ That screen already have a saved configuration"
 			echo "++ and no new specific configuration is asked"
-			DPI=$(cat $CONFDIR/${DISP}_${PDENSITY})
-			echo "++ --> using it : $DPI dpi"
+			INFO=$(cat $CONFDIR/${DISP}_${PDENSITY})
+			if [[ "$INFO" == "reset" ]]
+			then
+				echo "++ --> using a 1x ratio"
+				ACTION="reset"
+			else
+				DPI=$INFO
+				echo "++ --> using it : $DPI dpi"
+			fi
 		else
 			DPI=$DDPI
 		fi
@@ -167,7 +179,7 @@ fi
 					esac
 
 					# We did someting so update the conf file
-					rm $CONFDIR/${DISP}_${PDENSITY}
+					echo "reset" > $CONFDIR/${DISP}_${PDENSITY}
 				;;
 				"optimal")
 					# Set that display to scale that is like the standard 96dpi ($DPI=96)
